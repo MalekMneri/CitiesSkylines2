@@ -1,4 +1,5 @@
-﻿using Game;
+﻿using Colossal.Serialization.Entities;
+using Game;
 using Game.Common;
 using Game.Prefabs;
 using Unity.Collections;
@@ -16,27 +17,26 @@ namespace DCMilestoneRewards
 		protected override void OnCreate()
 		{
 			base.OnCreate();
-		}
+            this.milestoneQuery = GetEntityQuery(ComponentType.ReadOnly<MilestoneData>());
+            this.settings = Mod.INSTANCE.settings();
 
-		protected override void OnStartRunning()
-		{
-			base.OnStartRunning();
-			this.settings = Mod.INSTANCE.settings();
+            settings.onSettingsApplied += setting =>
+            {
+                if (setting.GetType() == typeof(Setting))
+                {
+                    this.updateGlobal((Setting)setting);
+                }
+            };
+        }
 
-			this.milestoneQuery = GetEntityQuery(ComponentType.ReadOnly<MilestoneData>());
+        protected override void OnGameLoaded(Context serializationContext)
+        {
+            base.OnGameLoaded(serializationContext);
 
-			this.originalMilestoneRewards = this.cacheMilestoneRewards();
+            this.originalMilestoneRewards = this.cacheMilestoneRewards();
 
-			settings.onSettingsApplied += setting =>
-			{
-				if (setting.GetType() == typeof(Setting))
-				{
-					this.updateGlobal((Setting)setting);
-				}
-			};
-
-			this.updateGlobal(settings);
-		}
+            this.updateGlobal(settings);
+        }
 
 		protected override void OnStopRunning()
 		{
@@ -92,10 +92,12 @@ namespace DCMilestoneRewards
 						milestone.m_Reward = 0;
 					}
 
-					nativeArray2[i] = milestone;
+                    Mod.log.Info("Updating milestone " + milestone.m_Index.ToString() + " to " + milestone.m_Reward.ToString());
+
+                    nativeArray2[i] = milestone;
 
 					var entity = nativeArray[i];
-					EntityManager.SetComponentData<MilestoneData>(entity, milestone);
+					EntityManager.SetComponentData(entity, milestone);
 					EntityManager.AddComponent<BatchesUpdated>(entity);
 				}
 			}
